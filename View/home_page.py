@@ -42,11 +42,9 @@ class Home_Student(MDScreen):
 
         self.student_id = self.session.get('student_id')
 
-        full_name = self.session.get("full_name", "Guest")
-        if full_name == "Guest":
+        self.full_name = self.session.get("full_name", "Guest")
+        if self.full_name == "Guest":
             print("Warning: full_name not set in session, defaulting to 'Guest'")
-
-
 
         background = Image(
             source="assets/background.png",
@@ -76,9 +74,18 @@ class Home_Student(MDScreen):
         )
         card_user_profile.add_widget(profile_icon)
 
+        response = self.client.table('student_table').select('first_name, last_name').eq('student_id', self.student_id).execute()
+        name = response.data
+        f_name = ""
+        l_name = ""
+        for n in name:
+            f_name = n['first_name']
+            l_name = n['last_name']
+        print(f_name + l_name)
+
         card_user_profile.add_widget(
             MDLabel(
-                text=full_name,
+                text=f_name + " " + l_name,
                 halign="center",
                 theme_text_color="Primary",
                 font_style="H6",

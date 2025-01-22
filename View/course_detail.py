@@ -427,4 +427,5 @@ class CourseDetail(MDScreen):
         Clock.unschedule(self.update_data)
 
     def go_back(self, instance):
+        self.session.clear()
         self.manager.current = "Home_Student"

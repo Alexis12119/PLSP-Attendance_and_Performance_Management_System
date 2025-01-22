@@ -187,8 +187,8 @@ class Register_Student1(BaseRegistrationScreen):
                 if result.get("status") == "fail":
                     toast(result.get("message"))
                 else:
-                    result = self.user_controller.validate_student(last_name, student_id, first_name)
-                    if result.get("status") == "fail":
+                    result = self.user_controller.validate_student(first_name, last_name, student_id)
+                    if result['status'] == 'fail' :
                         toast(result.get("message"))
                     else:
                         self.manager.add_widget(Register_Student2(name="Register_Student2"))

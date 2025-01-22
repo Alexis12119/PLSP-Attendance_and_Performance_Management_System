@@ -103,7 +103,7 @@ class UserModel:
                 .eq("first_name", first_name)
                 .execute()
             )
-            return response.data
+            return len(response.data) > 0
         except Exception as e:
             return {"error": str(e)}
 
@@ -152,12 +152,11 @@ class UserModel:
     def login_checker(self, email, password):
         try:
             for role, table in [("teacher", "teacher_table"), ("student", "student_table")]:
+                print(role, table)
                 response = self.client.table(table).select("*").eq("email", email).execute()
                 if response.data:
                     user = response.data[0]
                     if self.verify_password(password, user.get("password")):
-                        full_name = f"{user.get('first_name')} {user.get('last_name')}"
-
                         # Check the role and fetch either student_id or teacher_id
                         if role == "teacher":
                             teacher_id = user.get("teacher_id", None)
@@ -165,7 +164,7 @@ class UserModel:
                                 "status": "found",
                                 "role": role,
                                 "teacher_id": teacher_id,  # Return teacher_id for teachers
-                                "full_name": full_name,
+                                "full_name": f"{user.get('first_name')} {user.get('last_name')}",
                                 "message": f"Welcome, {user.get('last_name')}",
                                 "data": user,
                             }
@@ -175,7 +174,7 @@ class UserModel:
                                 "status": "found",
                                 "role": role,
                                 "student_id": student_id,  # Return student_id for students
-                                "full_name": full_name,
+                                "full_name": f"{user.get('first_name')} {user.get('last_name')}",
                                 "message": f"Welcome, {user.get('last_name')}",
                                 "data": user,
                             }
