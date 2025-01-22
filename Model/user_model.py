@@ -15,16 +15,54 @@ class UserModel:
         sender_email = "jiroluismanalo24@gmail.com"
         sender_password = "onpc xdvm svqx axhb"
         subject = "Password Recovery Code"
-        body = f"Your password recovery code is: {code}"
 
-        msg = MIMEText(body)
+        body = f"""
+        <html><body style="font-family: Arial, sans-serif; margin: 0; padding: 0;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td style="padding: 20px 0 30px 0;">
+                        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border: 1px solid #cccccc; border-collapse: collapse;">
+                            <tr>
+                                <td align="center" bgcolor="#2a7352" style="padding: 40px 0 30px 0; color: #ffffff; font-size: 28px; font-weight: bold; font-family: Arial, sans-serif;">
+                                    SALI - SEEK
+                                </td>
+                            </tr>
+                            <tr>
+                                <td bgcolor="#ffffff" style="padding: 40px 30px 40px 30px;">
+                                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                        <tr>
+                                            <td align="center" style="color: #153643; font-family: Arial, sans-serif; font-size: 24px;">
+                                                <b>Your password reset code is:</b>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" style="padding: 20px 0 30px 0; color: #153643; font-family: Arial, sans-serif; font-size: 28px; font-weight: bold;">
+                                                {code}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" bgcolor="#2a7352" style="padding: 20px; color: #ffffff; font-size: 18px; font-family: Arial, sans-serif;">
+                                                SYS_TEAM
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body></html>
+        """
+
+        msg = MIMEText(body, "html")
         msg['Subject'] = subject
         msg['From'] = sender_email
         msg['To'] = email
 
         try:
             with smtplib.SMTP('smtp.gmail.com', 587) as server:
-                server.starttls()  # Upgrade the connection to a secure encrypted SSL/TLS connection
+                server.starttls()
                 server.login(sender_email, sender_password)
                 server.sendmail(sender_email, email, msg.as_string())
             return {"status": "success", "message": "Code sent to email."}
@@ -41,10 +79,17 @@ class UserModel:
             return {"status": "fail", "message": "Email not found."}
 
     def change_password(self, email, new_password):
-        hashed_password = self.hash_password(new_password)
+        print(email, new_password)
+        print(type(email), type(new_password))
+        # hashed_password = self.hash_password(new_password)
         try:
-            response = self.client.table("student_table").update({"password": hashed_password}).eq("email", email).execute()
+            response = self.client.table("student_table").update({"password": new_password}).eq("email", email).execute()
+            print(response)
             return response
+            # if response.data:
+            #     return {"status": "success"}
+            # else:
+            #     return {"error": "No data returned from the update"}
         except Exception as e:
             return {"error": str(e)}
 

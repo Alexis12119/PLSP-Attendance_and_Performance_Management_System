@@ -8,6 +8,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.graphics import Color, Ellipse, Rectangle
 from kivy.uix.widget import Widget
+from kivy.clock import Clock
 from math import pi
 from supabase_manager import get_supabase_client
 from session_manager import SessionManager
@@ -58,9 +59,37 @@ class CourseDetail(MDScreen):
         
         self.setup_ui()
     
+        # Schedule periodic updates
+        Clock.schedule_interval(self.update_data, 5)  # Update every 5 seconds
+    
+    def setup_realtime_subscription(self):
+        try:
+            # Subscribe to changes in activity_student table
+            self.client.table('activity_student').on('*', self.handle_realtime_update).subscribe()
+            
+            # Subscribe to changes in activity_table
+            self.client.table('activity_table').on('*', self.handle_realtime_update).subscribe()
+        except Exception as e:
+            print(f"Error setting up real-time subscription: {e}")
+
+    def handle_realtime_update(self, payload):
+        # Schedule the update on the next frame to ensure it runs on the main thread
+        Clock.schedule_once(lambda dt: self.update_data(dt))
+    
+    def update_data(self, dt):
+        try:
+            # Fetch fresh data
+            self.activities_data = self.fetch_activities_data()
+            self.progress_data = self.calculate_progress()
+            
+            # Update UI
+            self.update_activities_ui()
+            self.update_pie_chart()
+        except Exception as e:
+            print(f"Error updating data: {e}")
+    
     def fetch_activities_data(self):
         try:
-            # Fetch all activities for this class
             activities_response = self.client.table('activity_table')\
                 .select('*')\
                 .eq('class_id', self.class_id)\
@@ -68,7 +97,6 @@ class CourseDetail(MDScreen):
             
             activities = activities_response.data
             
-            # Fetch completed activities for this student
             completed_response = self.client.table('activity_student')\
                 .select('activity_id')\
                 .eq('student_id', self.student_id)\
@@ -76,7 +104,6 @@ class CourseDetail(MDScreen):
             
             completed_activities = {item['activity_id'] for item in completed_response.data}
             
-            # Combine the data
             activities_with_status = []
             for activity in activities:
                 activities_with_status.append({
@@ -86,7 +113,6 @@ class CourseDetail(MDScreen):
                     'created_at': activity['created_at']
                 })
             
-            # Sort by creation date
             return sorted(activities_with_status, key=lambda x: x['created_at'])
         except Exception as e:
             print(f"Error fetching activities: {e}")
@@ -106,6 +132,51 @@ class CourseDetail(MDScreen):
             "Complete": complete_percentage,
             "Incomplete": incomplete_percentage
         }
+    
+    def update_pie_chart(self):
+        if hasattr(self, 'pie_chart'):
+            self.pie_chart.data = self.progress_data
+            self.pie_chart.update_pie()
+            
+            # Update legend labels
+            for legend_item in self.legend_layout.children:
+                label_widget = legend_item.children[0]
+                if "Complete" in label_widget.text:
+                    label_widget.text = f"Complete: {self.progress_data['Complete']}%"
+                elif "Incomplete" in label_widget.text:
+                    label_widget.text = f"Incomplete: {self.progress_data['Incomplete']}%"
+
+    def update_activities_ui(self):
+        if hasattr(self, 'activities_layout'):
+            self.activities_layout.clear_widgets()
+            
+            for activity in self.activities_data:
+                activity_item = BoxLayout(
+                    orientation='horizontal',
+                    size_hint_y=None,
+                    height="40dp",
+                    spacing="10dp"
+                )
+                
+                # Use a different icon to show status (not interactive)
+                status_icon = MDIconButton(
+                    icon="checkbox-marked-circle" if activity["done"] else "checkbox-blank-circle-outline",
+                    theme_text_color="Custom",
+                    text_color=(0, 0.6, 0, 1),
+                    size_hint=(None, None),
+                    size=("24dp", "24dp"),
+                    disabled=True  # Make it non-interactive
+                )
+                
+                activity_label = MDLabel(
+                    text=activity["name"],
+                    theme_text_color="Custom",
+                    text_color=(0, 0, 0, 1)
+                )
+                
+                activity_item.add_widget(status_icon)
+                activity_item.add_widget(activity_label)
+                self.activities_layout.add_widget(activity_item)
     
     def toggle_activity(self, activity_id, checkbox):
         try:
@@ -149,7 +220,16 @@ class CourseDetail(MDScreen):
     
     def setup_ui(self):
         layout = FloatLayout(size_hint=(1, 1))
+             # When setting up activities, store the layout reference
+        self.activities_layout = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            spacing="10dp"
+        )
+        self.activities_layout.bind(minimum_height=self.activities_layout.setter('height'))
         
+        # Initial population of activities
+        self.update_activities_ui()   
         # Background
         background = Image(
             source="assets/background.png",
@@ -335,6 +415,16 @@ class CourseDetail(MDScreen):
         layout.add_widget(activities_card)
         
         self.add_widget(layout)
-    
+    def on_leave(self):
+        # Clean up subscriptions when leaving the screen
+        try:
+            self.client.remove_subscription('activity_student')
+            self.client.remove_subscription('activity_table')
+        except Exception as e:
+            print(f"Error removing subscriptions: {e}")
+        
+        # Stop the update interval
+        Clock.unschedule(self.update_data)
+
     def go_back(self, instance):
         self.manager.current = "Home_Student"

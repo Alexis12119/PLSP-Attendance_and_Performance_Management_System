@@ -1,26 +1,26 @@
+from supabase_manager import get_supabase_client
 from kivy.uix.scrollview import ScrollView
 from kivymd.uix.label import MDLabel
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.card import MDCard
 from kivy.uix.image import Image
 from kivy.uix.floatlayout import FloatLayout
-from kivymd.uix.button import MDRaisedButton, MDIconButton
+from kivymd.uix.button import MDRaisedButton, MDFlatButton, MDIconButton
 from kivy.uix.boxlayout import BoxLayout
+from kivymd.uix.dialog import MDDialog
 from Controller.class_controller import ClassController
 from session_manager import SessionManager
-# import matplotlib.pyplot as plt
 
 class ClassPage_Teacher(MDScreen):
-    def __init__(self, **kwargs):
+    def __init__(self, class_id, student_id, **kwargs):
         super().__init__(**kwargs)
 
-        # Create a layout for the screen
+        self.dialog = None  # Initialize dialog variable
         layout = FloatLayout(size_hint=(1, 1))
 
-        # Initialize class controller and session manager
         self.class_controller = ClassController()
         self.session = SessionManager()
-
+        self.client = get_supabase_client()
         # Get the class information from the session
         class_name = self.session.get("class_name", "Class")
         class_code = self.session.get("class_code", "Code")
@@ -35,6 +35,9 @@ class ClassPage_Teacher(MDScreen):
         )
         layout.add_widget(background)
 
+        response = self.client.table("student_classes").select("*").eq("class_id", class_id).execute()
+        print(response)
+        total_count = len(response.data)
         # Card layout for content
         card_class = MDCard(
             orientation="vertical",
@@ -42,15 +45,30 @@ class ClassPage_Teacher(MDScreen):
             pos_hint={"center_x": 0.5, "center_y": 0.5},
             radius=[15, 15, 15, 15],
             padding="20dp",
-            spacing="30dp",
+            spacing="10dp",
         )
         layout.add_widget(card_class)
+
+        back_button_layout = FloatLayout(size_hint=(1, 1))
+        layout.add_widget(back_button_layout)
+
+        back_button = MDIconButton(
+            icon="arrow-left",
+            size_hint=(None, None),
+            height="40dp",
+            width="40dp",
+            pos_hint={"x": 0.05, "y": 0.78},  # Top-left of the layout
+            theme_text_color="Custom",
+            text_color=[0, 0, 0, 1],
+        )
+        back_button_layout.add_widget(back_button)
+        back_button.bind(on_release=self.navigate_back)
 
         # Course label layout
         course_label_layout = BoxLayout(
             orientation="vertical",
-            size_hint=(1, 1),
-            height="50dp",
+            size_hint=(1, None),
+            height="100dp",
             spacing="5dp",
         )
         card_class.add_widget(course_label_layout)
@@ -67,9 +85,10 @@ class ClassPage_Teacher(MDScreen):
         course_label_layout.add_widget(course_code_label)
 
         course_class_label = MDRaisedButton(
-            text=class_code,  # Use the class code from the session
+            text=class_code,
             elevation=0,
-            size_hint=(0.5, 1),
+            size_hint=(0.5, None),
+            height="40dp",
             pos_hint={"center_x": 0.5},
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
@@ -80,8 +99,8 @@ class ClassPage_Teacher(MDScreen):
         # Course class layout
         course_label_class_layout = BoxLayout(
             orientation="vertical",
-            size_hint=(1, 1),
-            height="50dp",
+            size_hint=(1, None),
+            height="100dp",
             spacing="5dp",
         )
         card_class.add_widget(course_label_class_layout)
@@ -100,7 +119,8 @@ class ClassPage_Teacher(MDScreen):
         course_name_class_label = MDRaisedButton(
             text=class_name,
             elevation=0,
-            size_hint=(0.5, 1),
+            size_hint=(0.5, None),
+            height="40dp",
             pos_hint={"center_x": 0.5},
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
@@ -108,86 +128,125 @@ class ClassPage_Teacher(MDScreen):
         )
         course_label_class_layout.add_widget(course_name_class_label)
 
-        # Add the layout to the screen
-        self.add_widget(layout)
-
-class ClassPage_Student(MDScreen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        layout = FloatLayout(size_hint=(1, 1))
-
-        # Background image
-        background = Image(
-            source="assets/background.png",
-            allow_stretch=True,
-            keep_ratio=False,
-            size_hint=(1, 1),
-            pos_hint={"x": 0, "y": 0},
-        )
-        layout.add_widget(background)
-
-        # Profile card
-        card_user_profile = MDCard(
+        # Course count layout
+        course_count_layout = BoxLayout(
             orientation="vertical",
-            size_hint=(0.9, None),
-            height="250dp",  # Adjusted height for the graph
-            pos_hint={"center_x": 0.5, "center_y": 0.75},
-            radius=[15, 15, 15, 15],
-            padding=[20, 20, 20, 20],
-            spacing="15dp"
+            size_hint=(1, None),
+            height="100dp",
+            spacing="5dp",
         )
+        card_class.add_widget(course_count_layout)
 
-        # Icon layout
-        icon_layout = BoxLayout(
+        course_count_class_label = MDLabel(
+            text="No. of Students",
+            halign="center",
+            font_style="Subtitle1",
+            theme_text_color="Custom",
+            text_color=[0, 0.6, 0, 1],
+            font_name="Roboto-Bold",
+            bold=True,
+        )
+        course_count_layout.add_widget(course_count_class_label)
+
+        student_count_label = MDRaisedButton(
+            text=str(total_count),
+            elevation=0,
+            size_hint=(0.5, None),
+            height="40dp",
+            pos_hint={"center_x": 0.5},
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            font_name="assets/fonts/Uni Sans Heavy.otf",
+        )
+        course_count_layout.add_widget(student_count_label)
+
+        # Button layout
+        button_layout = BoxLayout(
             orientation="horizontal",
-            size_hint=(None, None),
-            width="120dp",
+            size_hint=(1, None),
             height="50dp",
-            spacing="20dp",
-            pos_hint={"center_x": 0.5},
+            spacing="10dp",
         )
-        card_user_profile.add_widget(icon_layout)
 
-        # Add Class button
-        add_class_button = MDIconButton(
-            icon="plus-box",
+        card_class.add_widget(button_layout)
+
+        attendance_button = MDRaisedButton(
+            text="Attendance",
+            size_hint=(1, None),
+            height="40dp",
             theme_text_color="Custom",
-            text_color=(0, 0.6, 0, 1),
-            icon_size="30dp",
-            pos_hint={"center_x": 0.5},
+            text_color=[1, 1, 1, 1],
+            font_name="assets/fonts/Uni Sans Heavy.otf",
         )
-        icon_layout.add_widget(add_class_button)
+        button_layout.add_widget(attendance_button)
 
-        # Logout button
-        logout_icon = MDIconButton(
-            icon="logout-variant",
+        activity_button = MDRaisedButton(
+            text="Activity",
+            size_hint=(1, None),
+            height="40dp",
             theme_text_color="Custom",
-            text_color=(0, 0.6, 0, 1),
-            icon_size="30dp",
-            pos_hint={"center_x": 0.5},
+            text_color=[1, 1, 1, 1],
+            font_name="assets/fonts/Uni Sans Heavy.otf",
         )
-        icon_layout.add_widget(logout_icon)
+        button_layout.add_widget(activity_button)
 
-        layout.add_widget(card_user_profile)
-
-        # Class card
-        card_user_class = MDCard(
-            orientation="vertical",
-            size_hint=(0.9, 0.5),
-            pos_hint={"center_x": 0.5, "center_y": 0.28},
-            radius=[15, 15, 15, 15],
-            padding=[10, 10, 10, 10],
+        delete_button = MDRaisedButton(
+            text="Delete Class",
+            size_hint=(1, None),
+            height="40dp",
+            theme_text_color="Custom",
+            text_color=[0.6, 0, 0, 1],
+            font_name="assets/fonts/Uni Sans Heavy.otf",
         )
+        card_class.add_widget(delete_button)
 
-        # ScrollView for classes
-        scroll_view = ScrollView(size_hint=(1, 1))
-        card_user_class.add_widget(scroll_view)
+        delete_button.bind(on_release=self.show_confirmation_dialog)
 
-        self.dialog = None
-
-        layout.add_widget(card_user_class)
-
-        # Add the main layout to the screen
         self.add_widget(layout)
 
+    def navigate_back(self, instance):
+        self.manager.current = "Home_Teacher"
+
+    def show_confirmation_dialog(self, instance):
+        if not self.dialog:
+            self.dialog = MDDialog(
+                title="Confirm Deletion",
+                text="Are you sure you want to delete this class?",
+                buttons=[
+                    MDFlatButton(
+                        text="CANCEL",
+                        font_name="assets/fonts/Uni Sans Heavy.otf",
+                        theme_text_color="Custom",
+                        text_color=(0, 0.6, 0, 1),
+                        on_release=self.close_dialog,
+                    ),
+                    MDFlatButton(
+                        text="DELETE",
+                        font_name="assets/fonts/Uni Sans Heavy.otf",
+                        theme_text_color="Custom",
+                        text_color=(0.6, 0, 0, 1),
+                        on_release=self.confirm_delete_class,
+                    ),
+                ],
+            )
+        self.dialog.open()
+
+    def close_dialog(self, instance):
+        self.dialog.dismiss()
+
+    def confirm_delete_class(self, instance):
+        self.dialog.dismiss()
+        self.delete_class()
+
+    def delete_class(self):
+        # Defer the import to avoid circular dependency
+        from View.home_page import Home_Teacher
+
+        class_code = self.session.get("class_code", "Code")
+        response = self.class_controller.delete_class(class_code)
+
+        if response['status'] == 'success':
+            self.manager.add_widget(Home_Teacher(name="Home_Teacher"))
+            self.manager.current = "Home_Teacher"
+        else:
+            print("Error deleting class:", response['message'])

@@ -414,7 +414,6 @@ class Home_Student(MDScreen):
         self.manager.transition.direction = 'left'  # Optional: adds a transition effect
         self.manager.current = "CourseDetail"
 
-               
 class Home_Teacher(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -604,7 +603,6 @@ class Home_Teacher(MDScreen):
                 if "error" in result:
                     toast(f"{result['error']}")
                 else:
-                    # Add the new class to the grid dynamically
                     new_button_layout = FloatLayout(size_hint=(None, None), size=(130, 100))
 
                     new_icon = MDIconButton(
@@ -627,8 +625,8 @@ class Home_Teacher(MDScreen):
                     new_button_layout.add_widget(new_icon)
                     new_button_layout.add_widget(new_label)
 
-                    # Bind the button to navigate to ClassPage_Teacher
-                    new_button_layout.bind(on_release=lambda instance: self.go_to_class_page(class_name, result))
+                    new_icon.bind(
+                        on_release=lambda instance, name=class_name: self.go_to_class_page(name, "Unknown Code"))
 
                     self.grid_layout.add_widget(new_button_layout)
 
@@ -642,9 +640,8 @@ class Home_Teacher(MDScreen):
     def go_to_class_page(self, class_name, result):
         # Store class information in the session
         self.session.set("class_name", class_name)
-        self.session.set("class_code", result)  # Assuming result contains the class code
-
-        # Switch to ClassPage_Teacher
+        self.session.set("class_code", result)
+        self.manager.add_widget(ClassPage_Teacher(name="ClassPage_Teacher", class_id=60, student_id=2205879))
         self.manager.current = "ClassPage_Teacher"
 
     def display_teacher_classes(self, teacher_id):
@@ -654,6 +651,7 @@ class Home_Teacher(MDScreen):
         else:
             for class_info in classes:
                 class_name = class_info.get("class_name", "")
+                class_code = class_info.get("class_code", "")
 
                 new_button_layout = FloatLayout(size_hint=(None, None), size=(125, 100))
 
@@ -677,7 +675,9 @@ class Home_Teacher(MDScreen):
                 new_button_layout.add_widget(new_icon)
                 new_button_layout.add_widget(new_label)
 
-                # Bind the button to navigate to ClassPage_Teacher
-                new_button_layout.bind(on_release=lambda instance: self.go_to_class_page(class_name, class_info.get("class_code", "Unknown Code")))
+
+                new_icon.bind(
+                    on_release=lambda instance, name=class_name, code=class_code: self.go_to_class_page(name, code)
+                )
 
                 self.grid_layout.add_widget(new_button_layout)

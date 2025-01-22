@@ -1,7 +1,7 @@
 from kivymd.app import MDApp
 from kivy.core.window import Window
 from kivymd.uix.screenmanager import ScreenManager
-from View.class_page import ClassPage_Student, ClassPage_Teacher
+# from View.class_page import ClassPage_Student, ClassPage_Teacher
 from View.login import Login
 
 class MainApp(MDApp):

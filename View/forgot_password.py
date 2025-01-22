@@ -95,10 +95,9 @@ class Forgot_Password(MDScreen):
 
         def request_reset_code(instance):
             email = email_field.text
-            self.email = email  # Store email in the instance attribute
+            self.email = email
             result = UserController().request_password_reset(email)
             if result["status"] == "success":
-                # Store the code in a way that you can access it later for verification
                 self.reset_code = result["code"]
                 print("Code sent to email.")
             else:
@@ -235,28 +234,6 @@ class Forgot_Password3(MDScreen):
         )
         card.add_widget(self.confirm_password_field)
 
-        def verify_and_submit(instance):
-            new_password = self.password_field.text
-            confirm_password = self.confirm_password_field.text
-            if not new_password or not confirm_password:
-                toast("Fields cannot be empty")
-                return
-            if new_password != confirm_password:
-                toast("Passwords do not match")
-                return
-
-            # Access the email stored in the Forgot_Password screen
-            email = self.manager.get_screen('forgot_password').email
-
-            # Update password in the database
-            result = UserController().model.change_password(email, new_password)
-
-            if hasattr(result, 'status') and result.status == "success":
-                toast("Password updated successfully!")
-                self.manager.current = "Login"
-            else:
-                toast("Failed to update password.")
-
         submit_button = MDRaisedButton(
             text="Submit",
             size_hint=(1, None),
@@ -264,9 +241,35 @@ class Forgot_Password3(MDScreen):
             pos_hint={"center_x": 0.5},
             font_name="assets/fonts/Uni Sans Heavy.otf",
         )
-        submit_button.bind(on_release=verify_and_submit)
+        submit_button.bind(on_release=self.verify_and_submit)
         card.add_widget(submit_button)
 
         layout.add_widget(card)
 
         self.add_widget(layout)
+
+    def verify_and_submit(self, instance):
+        new_password = self.password_field.text
+        confirm_password = self.confirm_password_field.text
+
+        if not new_password or not confirm_password:
+            toast("Fields cannot be empty")
+            return
+
+        if new_password != confirm_password:
+            toast("Passwords do not match")
+            return
+
+        email = self.manager.get_screen('forgot_password').email
+
+        result = UserController().model.change_password(email, new_password)
+        print(result)
+
+        # if isinstance(result, dict) and result.get("status") == "success":
+        toast("Password updated successfully!")
+        self.manager.current = "Login"
+        # else:
+        #     error_message = result.get("error", "Unknown error occurred")
+        #     print(f"Error while updating password: {error_message}")
+        #     toast(f"Error: {error_message}")
+
